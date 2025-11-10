@@ -1,0 +1,146 @@
+version: '3.8'
+
+networks:
+  mlops-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  prometheus-data:
+  grafana-data:
+  consul-data:
+  nomad-data:
+
+services:
+  # Consul - Service Discovery and Configuration
+  consul:
+    image: hashicorp/consul:1.16
+    container_name: mlops-consul
+    hostname: consul
+    networks:
+      mlops-network:
+        ipv4_address: 172.20.0.10
+    ports:
+      - "8500:8500"     # UI
+      - "8600:8600/udp" # DNS
+    volumes:
+      - consul-data:/consul/data
+      - ./consul/consul.hcl:/consul/config/consul.hcl:ro
+    command: ["consul", "agent", "-config-file=/consul/config/consul.hcl"]
+    environment:
+      - CONSUL_BIND_INTERFACE=eth0
+    healthcheck:
+      test: ["CMD", "consul", "members"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  # Nomad - Workload Orchestration
+  nomad:
+    image: hashicorp/nomad:1.6
+    container_name: mlops-nomad
+    hostname: nomad
+    networks:
+      mlops-network:
+        ipv4_address: 172.20.0.20
+    ports:
+      - "4646:4646"     # UI and API
+      - "4647:4647"     # RPC
+      - "4648:4648"     # Serf
+    volumes:
+      - nomad-data:/nomad/data
+      - ./nomad/nomad.hcl:/nomad/config/nomad.hcl:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: ["nomad", "agent", "-config=/nomad/config/nomad.hcl"]
+    depends_on:
+      consul:
+        condition: service_healthy
+    privileged: true
+    environment:
+      - NOMAD_ADDR=http://localhost:4646
+    healthcheck:
+      test: ["CMD", "nomad", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # Prometheus - Metrics Collection
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: mlops-prometheus
+    hostname: prometheus
+    networks:
+      mlops-network:
+        ipv4_address: 172.20.0.30
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus-data:/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    depends_on:
+      - consul
+      - nomad
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  # Grafana - Visualization and Dashboards
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: mlops-grafana
+    hostname: grafana
+    networks:
+      mlops-network:
+        ipv4_address: 172.20.0.40
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./grafana/dashboard.json:/etc/grafana/provisioning/dashboards/dashboard.json:ro
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=mlopsadmin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  # ML Training App (will be deployed via Nomad)
+  ml-trainer:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    image: mlops-trainer:latest
+    container_name: ml-trainer-standalone
+    networks:
+      - mlops-network
+    profiles:
+      - standalone
+    environment:
+      - TRAINING_EPOCHS=5
+      - MODEL_NAME=demo-model
+    restart: "no"

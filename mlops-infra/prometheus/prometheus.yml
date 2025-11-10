@@ -1,0 +1,60 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Nomad metrics
+  - job_name: 'nomad'
+    metrics_path: '/v1/metrics'
+    params:
+      format: ['prometheus']
+    static_configs:
+      - targets: ['172.20.0.20:4646']
+    scrape_interval: 5s
+    scrape_timeout: 3s
+
+  # Consul metrics
+  - job_name: 'consul'
+    static_configs:
+      - targets: ['172.20.0.10:8500']
+    metrics_path: '/v1/agent/metrics'
+    params:
+      format: ['prometheus']
+    scrape_interval: 5s
+    scrape_timeout: 3s
+
+  # Consul services discovery
+  - job_name: 'consul-services'
+    consul_sd_configs:
+      - server: '172.20.0.10:8500'
+        datacenter: 'mlops-dc1'
+    relabel_configs:
+      - source_labels: [__meta_consul_service]
+        target_label: service
+      - source_labels: [__meta_consul_service_id]
+        target_label: service_id
+      - source_labels: [__meta_consul_node]
+        target_label: node
+      - source_labels: [__meta_consul_datacenter]
+        target_label: datacenter
+
+  # Docker containers metrics (if cAdvisor is available)
+  - job_name: 'docker'
+    static_configs:
+      - targets: []  # Add cAdvisor endpoint if needed
+    scrape_interval: 10s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
