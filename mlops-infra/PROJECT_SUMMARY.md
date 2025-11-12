@@ -114,11 +114,19 @@ mlops-infra/
 
 ## 🚀 Validation Commands
 
-### Quick Start (Windows PowerShell)
-```powershell
-cd "d:\abhi coding\project1\mlops-infra"
+### Quick Start (Cross-Platform)
+```bash
+# Navigate to the project directory
+cd mlops-infra
+
+# Build the ML training container
 docker-compose build ml-trainer
+
+# Start all infrastructure services
 docker-compose up -d
+
+# Deploy ML training job (after services are ready)
+docker exec mlops-nomad nomad job run /nomad/config/mlops.nomad
 ```
 
 ### Service Access URLs

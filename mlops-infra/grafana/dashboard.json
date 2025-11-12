@@ -21,7 +21,7 @@
             "refId": "A",
             "datasource": {
               "type": "prometheus",
-              "uid": "${DS_PROMETHEUS}"
+              "uid": "Prometheus"
             }
           }
         ],
@@ -65,7 +65,7 @@
             "refId": "A",
             "datasource": {
               "type": "prometheus",
-              "uid": "${DS_PROMETHEUS}"
+              "uid": "Prometheus"
             }
           }
         ],
@@ -101,7 +101,7 @@
             "legendFormat": "Completed Jobs",
             "datasource": {
               "type": "prometheus",
-              "uid": "${DS_PROMETHEUS}"
+              "uid": "Prometheus"
             }
           },
           {
@@ -110,7 +110,7 @@
             "legendFormat": "Failed Jobs",
             "datasource": {
               "type": "prometheus",
-              "uid": "${DS_PROMETHEUS}"
+              "uid": "Prometheus"
             }
           }
         ],
@@ -167,7 +167,7 @@
             "legendFormat": "CPU Usage",
             "datasource": {
               "type": "prometheus",
-              "uid": "${DS_PROMETHEUS}"
+              "uid": "Prometheus"
             }
           }
         ],
@@ -227,7 +227,7 @@
             "legendFormat": "Memory Usage",
             "datasource": {
               "type": "prometheus",
-              "uid": "${DS_PROMETHEUS}"
+              "uid": "Prometheus"
             }
           }
         ],
@@ -286,7 +286,7 @@
             "refId": "A",
             "datasource": {
               "type": "prometheus",
-              "uid": "${DS_PROMETHEUS}"
+              "uid": "Prometheus"
             }
           }
         ],
@@ -330,7 +330,7 @@
             "refId": "A",
             "datasource": {
               "type": "prometheus",
-              "uid": "${DS_PROMETHEUS}"
+              "uid": "Prometheus"
             }
           }
         ],
@@ -375,7 +375,7 @@
             "legendFormat": "System Memory (MB)",
             "datasource": {
               "type": "prometheus",
-              "uid": "${DS_PROMETHEUS}"
+              "uid": "Prometheus"
             }
           }
         ],

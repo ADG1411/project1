@@ -11,6 +11,7 @@ import json
 import logging
 from datetime import datetime
 from typing import Dict, List
+from prometheus_client import CollectorRegistry, Gauge, Counter, push_to_gateway
 
 # Configure logging
 logging.basicConfig(
@@ -27,6 +28,16 @@ class MLTrainer:
         self.epochs = epochs
         self.metrics = []
         self.start_time = datetime.now()
+        
+        # Prometheus metrics
+        self.registry = CollectorRegistry()
+        self.accuracy_gauge = Gauge('ml_training_accuracy', 'Current training accuracy', ['model_name'], registry=self.registry)
+        self.loss_gauge = Gauge('ml_training_loss', 'Current training loss', ['model_name'], registry=self.registry)
+        self.epoch_counter = Counter('ml_training_epochs_total', 'Total number of epochs completed', ['model_name'], registry=self.registry)
+        self.cpu_gauge = Gauge('ml_training_cpu_usage_percent', 'CPU usage during training', ['model_name'], registry=self.registry)
+        self.memory_gauge = Gauge('ml_training_memory_usage_percent', 'Memory usage during training', ['model_name'], registry=self.registry)
+        
+        self.pushgateway_url = os.getenv('PUSHGATEWAY_URL', 'http://172.20.0.50:9091')
         
     def generate_training_metrics(self, epoch: int) -> Dict:
         """Generate realistic training metrics for the current epoch"""
@@ -67,8 +78,28 @@ class MLTrainer:
         metrics = self.generate_training_metrics(epoch)
         self.metrics.append(metrics)
         
+        # Push metrics to Prometheus Pushgateway
+        self.push_metrics_to_prometheus(metrics)
+        
         logger.info(f"Epoch {epoch} completed - Accuracy: {metrics['accuracy']:.4f}, Loss: {metrics['loss']:.4f}")
         return metrics
+    
+    def push_metrics_to_prometheus(self, metrics: Dict):
+        """Push training metrics to Prometheus Pushgateway"""
+        try:
+            # Update Prometheus metrics
+            self.accuracy_gauge.labels(model_name=self.model_name).set(metrics['accuracy'])
+            self.loss_gauge.labels(model_name=self.model_name).set(metrics['loss'])
+            self.epoch_counter.labels(model_name=self.model_name).inc()
+            self.cpu_gauge.labels(model_name=self.model_name).set(metrics['cpu_usage_percent'])
+            self.memory_gauge.labels(model_name=self.model_name).set(metrics['memory_usage_percent'])
+            
+            # Push to gateway
+            push_to_gateway(self.pushgateway_url, job=f'ml-training-{self.model_name}', registry=self.registry)
+            logger.debug(f"Pushed metrics to Prometheus Pushgateway: {self.pushgateway_url}")
+            
+        except Exception as e:
+            logger.warning(f"Failed to push metrics to Prometheus: {e}")
     
     def save_metrics(self, filepath: str = "/tmp/training_metrics.json"):
         """Save training metrics to a file"""

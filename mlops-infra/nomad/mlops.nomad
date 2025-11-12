@@ -40,7 +40,7 @@ job "ml-training" {
         ]
         
         # Network configuration
-        network_mode = "bridge"
+        network_mode = "mlops-infra_mlops-network"
         
         # Force pull latest image
         force_pull = false

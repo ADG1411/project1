@@ -47,6 +47,13 @@ scrape_configs:
       - source_labels: [__meta_consul_datacenter]
         target_label: datacenter
 
+  # Pushgateway for ML training metrics
+  - job_name: 'pushgateway'
+    static_configs:
+      - targets: ['172.20.0.50:9091']
+    scrape_interval: 5s
+    honor_labels: true
+
   # Docker containers metrics (if cAdvisor is available)
   - job_name: 'docker'
     static_configs:

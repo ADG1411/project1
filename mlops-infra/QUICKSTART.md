@@ -3,9 +3,9 @@
 ## Deployment Commands
 
 ### 1. Initial Setup
-```powershell
+```bash
 # Navigate to project directory
-cd "d:\abhi coding\project1\mlops-infra"
+cd mlops-infra
 
 # Build the ML training container image
 docker-compose build ml-trainer
@@ -33,8 +33,8 @@ docker-compose logs grafana
 - **Grafana**: http://localhost:3000 (admin/mlopsadmin)
 
 ### 4. Deploy ML Training Job
-```powershell
-# Wait for services to be ready (30-60 seconds)
+```bash
+# Wait for services to be ready (60-90 seconds)
 # Then submit a training job
 docker exec mlops-nomad nomad job run /nomad/config/mlops.nomad
 
@@ -43,10 +43,20 @@ docker exec mlops-nomad nomad job status ml-training
 
 # View running allocations
 docker exec mlops-nomad nomad alloc status
+
+# Submit parameterized job with custom parameters
+docker exec mlops-nomad nomad job dispatch -meta MODEL_NAME=experiment-1 -meta TRAINING_EPOCHS=20 ml-training
 ```
 
-### 5. Cleanup
-```powershell
+### 5. Access Services
+- **Nomad UI**: http://localhost:4646
+- **Consul UI**: http://localhost:8500
+- **Prometheus**: http://localhost:9090
+- **Grafana**: http://localhost:3000 (admin/mlopsadmin)
+- **Pushgateway**: http://localhost:9091
+
+### 6. Cleanup
+```bash
 # Stop all services
 docker-compose down
 
@@ -64,7 +74,7 @@ docker-compose down -v
 4. **Network**: Check Windows Firewall settings for Docker networks
 
 ### Health Checks
-```powershell
+```bash
 # Test Consul
 curl http://localhost:8500/v1/status/leader
 
@@ -76,4 +86,10 @@ curl http://localhost:9090/-/healthy
 
 # Test Grafana
 curl http://localhost:3000/api/health
+
+# Test Pushgateway
+curl http://localhost:9091/-/healthy
+
+# View ML training metrics
+curl http://localhost:9091/metrics
 ```

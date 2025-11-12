@@ -19,6 +19,11 @@ services:
     image: hashicorp/consul:1.16
     container_name: mlops-consul
     hostname: consul
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       mlops-network:
         ipv4_address: 172.20.0.10
@@ -43,6 +48,11 @@ services:
     image: hashicorp/nomad:1.6
     container_name: mlops-nomad
     hostname: nomad
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       mlops-network:
         ipv4_address: 172.20.0.20
@@ -53,8 +63,9 @@ services:
     volumes:
       - nomad-data:/nomad/data
       - ./nomad/nomad.hcl:/nomad/config/nomad.hcl:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    command: ["nomad", "agent", "-config=/nomad/config/nomad.hcl"]
+      - ./nomad/mlops.nomad:/nomad/config/mlops.nomad:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: ["sh", "-c", "sleep 10 && nomad agent -config=/nomad/config/nomad.hcl"]
     depends_on:
       consul:
         condition: service_healthy
@@ -73,6 +84,11 @@ services:
     image: prom/prometheus:v2.47.0
     container_name: mlops-prometheus
     hostname: prometheus
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       mlops-network:
         ipv4_address: 172.20.0.30
@@ -104,6 +120,11 @@ services:
     image: grafana/grafana:10.1.0
     container_name: mlops-grafana
     hostname: grafana
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       mlops-network:
         ipv4_address: 172.20.0.40
@@ -124,6 +145,28 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  # Prometheus Pushgateway - For ML Metrics
+  pushgateway:
+    image: prom/pushgateway:v1.6.2
+    container_name: mlops-pushgateway
+    hostname: pushgateway
+    networks:
+      mlops-network:
+        ipv4_address: 172.20.0.50
+    ports:
+      - "9091:9091"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9091/-/healthy"]
       interval: 5s
       timeout: 3s
       retries: 3
