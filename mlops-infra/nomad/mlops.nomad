@@ -11,8 +11,9 @@ job "ml-training" {
 
   # Parameterized job configuration
   parameterized {
-    meta_keys = ["MODEL_NAME", "TRAINING_EPOCHS", "EXPERIMENT_ID"]
-    payload   = "optional"
+    meta_keys     = ["MODEL_NAME", "TRAINING_EPOCHS", "EXPERIMENT_ID"]
+    meta_required = ["MODEL_NAME"]
+    payload       = "optional"
   }
 
   group "ml-trainer" {
@@ -99,12 +100,18 @@ job "ml-training" {
 
         # Health check configuration
         check {
-          type     = "script"
-          name     = "training-status"
-          command  = "/bin/sh"
-          args     = ["-c", "ps aux | grep -v grep | grep python || exit 1"]
+          type     = "http"
+          name     = "training-health"
+          path     = "/health"
           interval = "30s"
           timeout  = "10s"
+          
+          # Check response contains expected fields
+          check_restart {
+            limit = 3
+            grace = "60s"
+            ignore_warnings = false
+          }
         }
       }
 
@@ -125,6 +132,41 @@ TIMESTAMP: {{ timestamp }}
 ALLOCATION: {{ env "NOMAD_ALLOC_ID" }}
 EOF
         destination = "local/config.yaml"
+      }
+
+      # Parameter validation template
+      template {
+        data = <<EOF
+#!/bin/bash
+# Parameter validation script
+set -e
+
+MODEL_NAME="{{ env "NOMAD_META_MODEL_NAME" }}"
+EPOCHS="{{ env "NOMAD_META_TRAINING_EPOCHS" | default "10" }}"
+
+# Validate MODEL_NAME is provided and alphanumeric
+if [[ -z "$MODEL_NAME" ]]; then
+    echo "ERROR: MODEL_NAME is required"
+    exit 1
+fi
+
+if [[ ! "$MODEL_NAME" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    echo "ERROR: MODEL_NAME must contain only alphanumeric characters, hyphens, and underscores"
+    exit 1
+fi
+
+# Validate EPOCHS is a number between 1-1000
+if [[ ! "$EPOCHS" =~ ^[0-9]+$ ]] || [[ "$EPOCHS" -lt 1 ]] || [[ "$EPOCHS" -gt 1000 ]]; then
+    echo "ERROR: TRAINING_EPOCHS must be a number between 1 and 1000"
+    exit 1
+fi
+
+echo "Parameter validation passed"
+echo "MODEL_NAME: $MODEL_NAME"
+echo "TRAINING_EPOCHS: $EPOCHS"
+EOF
+        destination = "local/validate_params.sh"
+        perms = "755"
       }
 
       # Kill timeout

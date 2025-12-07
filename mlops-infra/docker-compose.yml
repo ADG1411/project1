@@ -41,6 +41,14 @@ services:
       interval: 5s
       timeout: 3s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
     restart: unless-stopped
 
   # Nomad - Workload Orchestration
@@ -69,7 +77,6 @@ services:
     depends_on:
       consul:
         condition: service_healthy
-    privileged: true
     environment:
       - NOMAD_ADDR=http://localhost:4646
     healthcheck:
@@ -77,6 +84,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          cpus: '1.0'
+          memory: 512M
     restart: unless-stopped
 
   # Prometheus - Metrics Collection
@@ -113,6 +128,14 @@ services:
       interval: 5s
       timeout: 3s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     restart: unless-stopped
 
   # Grafana - Visualization and Dashboards
@@ -137,7 +160,7 @@ services:
       - ./grafana/dashboard.json:/etc/grafana/provisioning/dashboards/dashboard.json:ro
     environment:
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=mlopsadmin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_INSTALL_PLUGINS=grafana-piechart-panel
     depends_on:
@@ -148,6 +171,14 @@ services:
       interval: 5s
       timeout: 3s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
     restart: unless-stopped
 
   # Prometheus Pushgateway - For ML Metrics
@@ -170,6 +201,14 @@ services:
       interval: 5s
       timeout: 3s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
     restart: unless-stopped
 
   # ML Training App (will be deployed via Nomad)
@@ -186,4 +225,12 @@ services:
     environment:
       - TRAINING_EPOCHS=5
       - MODEL_NAME=demo-model
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
     restart: "no"
