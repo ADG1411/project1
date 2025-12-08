@@ -18,14 +18,14 @@ scrape_configs:
     params:
       format: ['prometheus']
     static_configs:
-      - targets: ['172.20.0.20:4646']
+      - targets: ['nomad:4646']
     scrape_interval: 5s
     scrape_timeout: 3s
 
   # Consul metrics
   - job_name: 'consul'
     static_configs:
-      - targets: ['172.20.0.10:8500']
+      - targets: ['consul:8500']
     metrics_path: '/v1/agent/metrics'
     params:
       format: ['prometheus']
@@ -50,7 +50,7 @@ scrape_configs:
   # Pushgateway for ML training metrics
   - job_name: 'pushgateway'
     static_configs:
-      - targets: ['172.20.0.50:9091']
+      - targets: ['pushgateway:9091']
     scrape_interval: 5s
     honor_labels: true
 

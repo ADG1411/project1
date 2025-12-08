@@ -22,7 +22,7 @@ client {
 
 # Consul integration
 consul {
-  address             = "172.20.0.10:8500"
+  address             = "consul:8500"
   server_service_name = "nomad-server"
   client_service_name = "nomad-client"
   auto_advertise      = true

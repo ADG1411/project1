@@ -108,7 +108,7 @@ class MLTrainer:
         self.training_start_time_gauge = Gauge('ml_training_start_timestamp', 'Training start timestamp', ['model_name', 'model_version'], registry=self.registry)
         self.training_end_time_gauge = Gauge('ml_training_end_timestamp', 'Training end timestamp', ['model_name', 'model_version'], registry=self.registry)
         
-        self.pushgateway_url = os.getenv('PUSHGATEWAY_URL', 'http://172.20.0.50:9091')
+        self.pushgateway_url = os.getenv('PUSHGATEWAY_URL', 'http://pushgateway:9091')
         
     def generate_training_metrics(self, epoch: int) -> Dict:
         """Generate realistic training metrics for the current epoch"""
@@ -415,6 +415,15 @@ def main():
         return 1
         
     finally:
+        # Cleanup metrics registry
+        try:
+            if 'trainer' in locals() and hasattr(trainer, 'registry'):
+                trainer.registry._collector_to_names.clear()
+                trainer.registry._names_to_collectors.clear()
+                logger.info("Metrics registry cleaned up")
+        except Exception as e:
+            logger.error(f"Error cleaning up metrics: {e}")
+        
         # Ensure health server is stopped
         if health_server:
             try:

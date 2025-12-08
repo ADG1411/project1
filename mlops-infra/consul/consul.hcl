@@ -6,7 +6,7 @@ server = true
 bootstrap_expect = 1
 
 # Network configuration
-bind_addr = "0.0.0.0"
+bind_addr = "{{ GetInterfaceIP \"eth0\" }}"
 client_addr = "0.0.0.0"
 
 # UI configuration

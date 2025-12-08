@@ -1,5 +1,6 @@
 // k6 Performance Test for MLOps Infrastructure
 import http from 'k6/http';
+import encoding from 'k6/encoding';
 import { check, group, sleep } from 'k6';
 import { Rate, Trend } from 'k6/metrics';
 

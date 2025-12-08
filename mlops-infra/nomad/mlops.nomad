@@ -41,7 +41,7 @@ job "ml-training" {
         ]
         
         # Network configuration
-        network_mode = "mlops-infra_mlops-network"
+        network_mode = "${NOMAD_META_COMPOSE_PROJECT:-mlops-infra}_mlops-network"
         
         # Force pull latest image
         force_pull = false
@@ -183,6 +183,19 @@ EOF
   constraint {
     attribute = "${attr.kernel.name}"
     value     = "linux"
+  }
+  
+  # Resource availability constraints
+  constraint {
+    attribute = "${node.resources.cpu}"
+    operator  = ">="
+    value     = "1000"  # At least 1000 MHz CPU
+  }
+  
+  constraint {
+    attribute = "${node.resources.memory}"
+    operator  = ">="
+    value     = "1024"  # At least 1024 MB RAM
   }
 
   # Update strategy
